@@ -18,8 +18,9 @@ const MainLayout = () => {
   return (
     <div className="min-h-screen bg-brand-black text-brand-white flex flex-col font-body w-full">
       <header className={`absolute top-0 left-0 right-0 z-50 flex justify-between items-center p-6 md:p-10 w-full max-w-[1200px] mx-auto ${isHome ? 'bg-transparent' : 'bg-brand-black/90 backdrop-blur-sm border-b border-white/10'}`}>
-        <Link to="/" className="flex flex-col group z-50" onClick={closeMenu}>
-          <h1 className="font-display text-3xl md:text-4xl leading-none font-normal text-brand-white pt-2">Jardim de Viana</h1>
+        <Link to="/" className="flex items-center gap-3 group z-50" onClick={closeMenu}>
+          <img src="/logo.png" alt="Jardim de Viana" className="h-12 md:h-16 w-auto object-contain" />
+          <h1 className="font-display text-xl md:text-2xl leading-none font-normal text-brand-white pt-1 hidden sm:block">Jardim de Viana</h1>
         </Link>
         <button 
           className="md:hidden z-50 text-brand-white hover:text-brand-orange transition-colors"

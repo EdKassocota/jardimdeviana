@@ -19,6 +19,14 @@ export function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-brand-black/50 via-brand-black/80 to-brand-black" />
         
         <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-4xl mx-auto mt-20">
+          <motion.img 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1, ease: "easeOut" }}
+            src="/logo.png" 
+            alt="Logo Jardim de Viana" 
+            className="w-24 md:w-32 mb-10"
+          />
           <motion.span 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -127,7 +135,8 @@ export function Home() {
         </div>
       </section>
       
-      <footer className="py-10 border-t border-white/5 flex flex-col items-center gap-6">
+      <footer className="py-20 border-t border-white/5 flex flex-col items-center gap-8">
+        <img src="/logo.png" alt="Logo Jardim de Viana" className="h-16 w-auto opacity-80" />
         <div className="font-display text-2xl font-light">Jardim <span className="text-brand-orange italic">Viana</span></div>
         <div className="opacity-40 text-[9px] uppercase tracking-widest text-center flex flex-col gap-2">
           <span>© 2026 Jardim de Viana. Todos os direitos reservados.</span>
