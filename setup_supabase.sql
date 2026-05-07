@@ -1,5 +1,15 @@
 -- Run this script in the Supabase SQL Editor to create the necessary table and storage for the reservations.
 
+-- Create restaurant_tables table
+CREATE TABLE restaurant_tables (
+  id text PRIMARY KEY,
+  name text NOT NULL,
+  max_pax integer NOT NULL,
+  abstract_pos jsonb NOT NULL,
+  type text DEFAULT 'table',
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Create reservations table
 CREATE TABLE reservations (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),

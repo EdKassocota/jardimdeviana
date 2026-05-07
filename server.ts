@@ -13,9 +13,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Supabase Setup
-const supabaseUrl = process.env.SUPABASE_URL || 'https://zuzumoowrdbbmhrhmrfc.supabase.co';
-const supabaseKey = process.env.SUPABASE_KEY || 'sb_publishable_F6KSNwH1i92Fb42ct1pDBg_SXcatb7d';
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error("❌ ERRO: SUPABASE_URL ou SUPABASE_KEY não encontrados no ficheiro .env");
+  console.log("A usar valores de fallback (podem estar incorretos)...");
+}
+
+const finalUrl = supabaseUrl || 'https://zuzumoowrdbbmhrhmrfc.supabase.co';
+const finalKey = supabaseKey || 'sb_publishable_F6KSNwH1i92Fb42ct1pDBg_SXcatb7d';
+
+const supabase = createClient(finalUrl, finalKey);
+console.log(`✅ Supabase configurado para: ${finalUrl}`);
 
 const app = express();
 const PORT = 3000;
