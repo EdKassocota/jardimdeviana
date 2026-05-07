@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import multer from "multer";
 import fs from "fs";
@@ -9,8 +8,8 @@ import { fileURLToPath } from "url";
 import cors from "cors";
 import { createClient } from "@supabase/supabase-js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __filename = typeof __filename !== 'undefined' ? __filename : (typeof import.meta !== 'undefined' && import.meta.url ? fileURLToPath(import.meta.url) : '');
+const __dirname = typeof __dirname !== 'undefined' ? __dirname : (__filename ? path.dirname(__filename) : process.cwd());
 
 // Supabase Setup
 const supabaseUrl = process.env.SUPABASE_URL || 'https://zuzumoowrdbbmhrhmrfc.supabase.co';
@@ -330,6 +329,7 @@ app.post("/api/tables", async (req, res) => {
 
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
