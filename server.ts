@@ -1,6 +1,7 @@
-import 'dotenv/config';
+if (!process.env.VERCEL) {
+  await import('dotenv/config');
+}
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import multer from "multer";
 import fs from "fs";
@@ -79,7 +80,7 @@ app.get("/api/health", (req, res) => {
 app.get("/api/reservations", async (req, res) => {
   const { data, error } = await supabase.from('reservations').select('*').order('created_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
-  
+
   const formatted = data.map(r => ({
     ...r,
     tableId: r.table_id,
@@ -148,18 +149,18 @@ app.get("/api/reservations/ref/:referenceCode", async (req, res) => {
 
 app.post("/api/reservations", async (req, res) => {
   const { tableId, date, time, pax, client } = req.body;
-  
+
   // Check conflicts (reserve entire period lunch/dinner)
   const getSlot = (t: string) => parseInt(t.split(':')[0]) < 17 ? 'lunch' : 'dinner';
   const targetSlot = getSlot(time);
-  
+
   const { data: existing, error: fetchError } = await supabase
     .from('reservations')
     .select('*')
     .eq('table_id', tableId)
     .eq('date', date)
     .neq('status', 'rejected');
-    
+
   if (fetchError) {
     console.error("Supabase fetch error:", fetchError.message);
     return res.status(500).json({ error: "Erro de permissão no Supabase: RLS ativado ou chave sem permissão." });
@@ -207,10 +208,10 @@ app.post("/api/reservations/:id/upload", upload.single("proof"), async (req, res
   const file = req.file;
   const fileExt = path.extname(file.originalname);
   const fileName = `${uuidv4()}${fileExt}`;
-  
+
   try {
     const fileBuffer = fs.readFileSync(file.path);
-    
+
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('proofs')
       .upload(fileName, fileBuffer, {
@@ -233,7 +234,7 @@ app.post("/api/reservations/:id/upload", upload.single("proof"), async (req, res
       .eq('id', req.params.id)
       .select()
       .single();
-      
+
     if (updateError) {
       console.error("Supabase update error:", updateError.message);
       return res.status(500).json({ error: "Erro ao atualizar comprovativo." });
@@ -254,11 +255,11 @@ app.post("/api/reservations/:id/upload", upload.single("proof"), async (req, res
 app.patch("/api/reservations/:id/status", async (req, res) => {
   const { status } = req.body;
   const { data, error } = await supabase
-      .from('reservations')
-      .update({ status })
-      .eq('id', req.params.id)
-      .select()
-      .single();
+    .from('reservations')
+    .update({ status })
+    .eq('id', req.params.id)
+    .select()
+    .single();
 
   if (error) {
     console.error("Supabase update status error:", error.message);
@@ -279,15 +280,15 @@ app.get("/api/tables", async (req, res) => {
   try {
     const { data: dbData, error } = await supabase.from('restaurant_tables').select('*');
     if (error) {
-       console.error("Error fetching tables from supabase:", error);
-       // Allow fallback to default for fresh installations
-       return res.json(defaultTables);
+      console.error("Error fetching tables from supabase:", error);
+      // Allow fallback to default for fresh installations
+      return res.json(defaultTables);
     }
-    
+
     if (!dbData || dbData.length === 0) {
       return res.json(defaultTables);
     }
-    
+
     const tables = dbData.map(t => ({
       id: t.id,
       name: t.name,
@@ -295,7 +296,7 @@ app.get("/api/tables", async (req, res) => {
       abstractPos: t.abstract_pos,
       type: t.type
     }));
-    
+
     res.json(tables);
   } catch (err: any) {
     res.status(500).json({ error: "Failed to read tables" });
@@ -305,7 +306,7 @@ app.get("/api/tables", async (req, res) => {
 app.post("/api/tables", async (req, res) => {
   try {
     const tables = req.body;
-    
+
     const dbTables = tables.map((t: any) => ({
       id: t.id,
       name: t.name,
@@ -340,6 +341,7 @@ app.post("/api/tables", async (req, res) => {
 
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
