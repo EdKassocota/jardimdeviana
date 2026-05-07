@@ -35,8 +35,12 @@ app.use(cors());
 app.use(express.json());
 
 const UPLOADS_DIR = "/tmp/uploads";
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+try {
+  if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  }
+} catch (e) {
+  console.warn("Could not create uploads dir, skipping (likely Vercel environment)");
 }
 
 const defaultTables = [
@@ -275,6 +279,12 @@ app.patch("/api/reservations/:id/status", async (req, res) => {
   });
 });
 
+// Global Error Handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("❌ Global Error:", err);
+  res.status(500).json({ error: "Internal Server Error", message: err.message });
+});
+
 // Admin stats
 app.get("/api/tables", async (req, res) => {
   try {
@@ -340,19 +350,26 @@ app.post("/api/tables", async (req, res) => {
 });
 
 async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
-    const { createServer: createViteServer } = await import("vite");
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
+  if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+    try {
+      const { createServer: createViteServer } = await import("vite");
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+      console.log("Vite middleware loaded");
+    } catch (e) {
+      console.error("Failed to load Vite:", e);
+    }
+  } else if (!process.env.VERCEL) {
     const distPath = path.join(__dirname, "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
+    if (fs.existsSync(distPath)) {
+      app.use(express.static(distPath));
+      app.get("*", (req, res) => {
+        res.sendFile(path.join(distPath, "index.html"));
+      });
+    }
   }
 
   if (!process.env.VERCEL) {
@@ -362,6 +379,9 @@ async function startServer() {
   }
 }
 
-startServer();
+// Em Vercel, não chamamos startServer() da mesma forma ou pelo menos garantimos que não bloqueia
+if (!process.env.VERCEL) {
+  startServer();
+}
 
 export default app;
