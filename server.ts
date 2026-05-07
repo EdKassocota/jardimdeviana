@@ -23,12 +23,11 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
-const UPLOADS_DIR = path.join(__dirname, "uploads");
+const UPLOADS_DIR = "/tmp/uploads";
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-const TABLES_FILE = path.join(__dirname, "tables.json");
 const defaultTables = [
   { id: "t1", name: "Mesa 1", maxPax: 2, abstractPos: { x: 20, y: 20 } },
   { id: "t2", name: "Mesa 2", maxPax: 2, abstractPos: { x: 20, y: 50 } },
@@ -37,10 +36,6 @@ const defaultTables = [
   { id: "t5", name: "Mesa 5", maxPax: 6, abstractPos: { x: 80, y: 50 } },
   { id: "t6", name: "Lounge 1", maxPax: 8, abstractPos: { x: 50, y: 80 }, type: 'lounge' },
 ];
-
-if (!fs.existsSync(TABLES_FILE)) {
-  fs.writeFileSync(TABLES_FILE, JSON.stringify(defaultTables, null, 2));
-}
 
 app.use("/uploads", express.static(UPLOADS_DIR));
 
@@ -270,21 +265,65 @@ app.patch("/api/reservations/:id/status", async (req, res) => {
 });
 
 // Admin stats
-app.get("/api/tables", (req, res) => {
+app.get("/api/tables", async (req, res) => {
   try {
-    const data = JSON.parse(fs.readFileSync(TABLES_FILE, 'utf-8'));
-    res.json(data);
-  } catch (err) {
+    const { data: dbData, error } = await supabase.from('restaurant_tables').select('*');
+    if (error) {
+       console.error("Error fetching tables from supabase:", error);
+       // Allow fallback to default for fresh installations
+       return res.json(defaultTables);
+    }
+    
+    if (!dbData || dbData.length === 0) {
+      return res.json(defaultTables);
+    }
+    
+    const tables = dbData.map(t => ({
+      id: t.id,
+      name: t.name,
+      maxPax: t.max_pax,
+      abstractPos: t.abstract_pos,
+      type: t.type
+    }));
+    
+    res.json(tables);
+  } catch (err: any) {
     res.status(500).json({ error: "Failed to read tables" });
   }
 });
 
-app.post("/api/tables", (req, res) => {
+app.post("/api/tables", async (req, res) => {
   try {
     const tables = req.body;
-    fs.writeFileSync(TABLES_FILE, JSON.stringify(tables, null, 2));
+    
+    const dbTables = tables.map((t: any) => ({
+      id: t.id,
+      name: t.name,
+      max_pax: t.maxPax,
+      abstract_pos: t.abstractPos,
+      type: t.type
+    }));
+
+    const { data: existing, error: fetchErr } = await supabase.from('restaurant_tables').select('id');
+    if (fetchErr) throw fetchErr;
+
+    const existingIds = existing?.map(e => e.id) || [];
+    const newIds = tables.map((t: any) => t.id);
+    const toDelete = existingIds.filter(id => !newIds.includes(id));
+
+    if (toDelete.length > 0) {
+      const { error: delErr } = await supabase.from('restaurant_tables').delete().in('id', toDelete);
+      if (delErr) throw delErr;
+    }
+
+    if (dbTables.length > 0) {
+      const { error: upsertErr } = await supabase.from('restaurant_tables').upsert(dbTables);
+      if (upsertErr) throw upsertErr;
+    }
+
     res.json({ success: true });
-  } catch (err) {
+  } catch (err: any) {
+    console.error("Error saving tables:", err);
     res.status(500).json({ error: "Failed to save tables" });
   }
 });
@@ -304,9 +343,13 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+  if (!process.env.VERCEL) {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  }
 }
 
 startServer();
+
+export default app;
